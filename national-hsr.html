@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>全國高鐵查詢</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="高鐵查詢">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23FF6600'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>🚄</text></svg>">
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E5%85%A8%E5%9C%8B%E9%AB%98%E9%90%B5%E6%9F%A5%E8%A9%A2%22%2C%22short_name%22%3A%22%E9%AB%98%E9%90%B5%E6%9F%A5%E8%A9%A2%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f5f7fa%22%2C%22theme_color%22%3A%22%23FF6600%22%7D">
+    <style>
+        :root { --bg: #f5f7fa; --card: #fff; --primary: #FF6600; --primary-hover: #cc5200; --text: #333; --border: #e0e0e0; --radius: 12px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); padding: 16px; }
+        .header { text-align: center; margin: 20px 0 16px; }
+        .header h1 { font-size: 1.6em; color: var(--primary); }
+        .header .coverage { font-size: 0.8em; color: #666; margin-top: 6px; }
+        .container { max-width: 600px; margin: 0 auto; background: var(--card); border-radius: var(--radius); box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 20px 16px; }
+        .input-group { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; position: relative; }
+        .input-group label { font-weight: 600; min-width: 55px; font-size: 0.9em; }
+        .search-box { flex: 1; position: relative; }
+        .search-box input { width: 100%; padding: 10px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 1em; outline: none; background: #fff; transition: border-color 0.2s; }
+        .search-box input:focus { border-color: var(--primary); }
+        .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--border); border-radius: 8px; max-height: 180px; overflow-y: auto; z-index: 20; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .dropdown-list.show { display: block; }
+        .dropdown-list li { padding: 10px 14px; cursor: pointer; font-size: 0.95em; }
+        .dropdown-list li:hover { background: #f0f7ff; }
+        .swap-btn { background: var(--primary); color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .btn { width: 100%; padding: 13px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; letter-spacing: 0.5px; margin-bottom: 12px; }
+        .btn:hover { background: var(--primary-hover); }
+        .btn:active { transform: scale(0.98); }
+        .result { margin-top: 16px; display: none; }
+        .result.show { display: block; }
+        .option-block { background: #f8fafc; border: 2px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .option-title { font-size: 1.1em; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .step-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+        .step-header { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .line-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.8em; font-weight: 700; color: #fff; }
+        .direction-tag { background: #fff3e0; color: #e65100; padding: 3px 8px; border-radius: 14px; font-size: 0.8em; }
+        .step-route { font-size: 0.9em; color: #666; }
+        .error-msg { background: #fff3f3; color: #c62828; padding: 12px; border-radius: 8px; margin-top: 12px; display: none; }
+        .error-msg.show { display: block; }
+        .footer { text-align: center; color: #999; font-size: 0.7em; margin-top: 16px; }
+        .city-link { display: inline-block; margin-top: 8px; background: #e8f5e9; border: 1px solid #2e7d32; color: #2e7d32; padding: 5px 12px; border-radius: 16px; font-size: 0.8em; cursor: pointer; font-weight: 600; text-decoration: none; }
+        .city-link:hover { background: #2e7d32; color: #fff; }
+        @media (max-width: 400px) { .input-group { flex-direction: column; align-items: stretch; } .swap-btn { align-self: center; } }
+    </style>
+</head>
+<body>
+    <div class="header"><h1>🚄 全國高鐵查詢</h1><div class="coverage">📍 覆蓋：京廣高鐵 · 京滬高鐵 · 東南沿海 · 京哈高鐵 · 西成高鐵 等</div></div>
+    <div class="container">
+        <div class="input-group"><label>出發站</label><div class="search-box"><input type="text" id="fromInput" placeholder="輸入高鐵站名" autocomplete="off"><ul class="dropdown-list" id="fromDropdown"></ul></div></div>
+        <div class="input-group" style="justify-content:center;"><button class="swap-btn" id="swapBtn">⇅</button></div>
+        <div class="input-group"><label>目的站</label><div class="search-box"><input type="text" id="toInput" placeholder="輸入高鐵站名" autocomplete="off"><ul class="dropdown-list" id="toDropdown"></ul></div></div>
+        <button class="btn" id="searchBtn">🔍 查詢路線</button>
+        <div class="error-msg" id="errorMsg"></div>
+        <div class="result" id="resultContainer"></div>
+    </div>
+    <div class="footer">🚄 高鐵路線僅供參考，實際班次請查詢12306<br>📲 可加入主畫面像 App 一樣使用</div>
+
+    <script>
+        (function() {
+            const LINE_DATA = {
+                '京广高铁':{name:'京廣高鐵',color:'#FF6600',stations:['北京西站','石家庄站','郑州东站','武汉站','长沙南站','广州南站'],dirUp:'廣州南站',dirDown:'北京西站',type:'hsr'},
+                '京沪高铁':{name:'京滬高鐵',color:'#0066CC',stations:['北京南站','天津南站','济南西站','南京南站','上海虹桥站'],dirUp:'上海虹橋站',dirDown:'北京南站',type:'hsr'},
+                '沪深高铁':{name:'滬深高鐵(東南沿海)',color:'#009933',stations:['上海虹桥站','杭州东站','宁波站','温州南站','福州南站','厦门北站','深圳北站'],dirUp:'深圳北站',dirDown:'上海虹橋站',type:'hsr'},
+                '京哈高铁':{name:'京哈高鐵',color:'#993333',stations:['北京站','沈阳北站','长春站','哈尔滨西站'],dirUp:'哈爾濱西站',dirDown:'北京站',type:'hsr'},
+                '西成高铁':{name:'西成高鐵',color:'#996600',stations:['西安北站','汉中站','广元站','成都东站'],dirUp:'成都東站',dirDown:'西安北站',type:'hsr'},
+                '沪昆高铁':{name:'滬昆高鐵',color:'#9933CC',stations:['上海虹桥站','杭州东站','南昌西站','长沙南站','贵阳北站','昆明南站'],dirUp:'昆明南站',dirDown:'上海虹橋站',type:'hsr'},
+                '广深港高铁':{name:'廣深港高鐵',color:'#1E3A8A',stations:['深圳北站','福田','广州南站'],dirUp:'廣州南站',dirDown:'深圳北站',type:'hsr'}
+            };
+
+            const stationLines = {}; const allStations = [];
+            for (const [k,d] of Object.entries(LINE_DATA)) {
+                d.stations.forEach(s => {
+                    if (!stationLines[s]) { stationLines[s] = new Set(); allStations.push(s); }
+                    stationLines[s].add(k);
+                });
+            }
+            allStations.sort((a,b)=>a.localeCompare(b,'zh'));
+
+            const CITY_PAGES = {
+                '北京西站':'beijing.html',
+                '北京南站':'beijing.html',
+                '北京站':'beijing.html',
+                '上海虹桥站':'shanghai.html',
+                '广州南站':'index.html',
+                '深圳北站':'index.html',
+                '福田':'index.html'
+            };
+
+            function setupSearchBox(inputId, dropdownId) {
+                const inp = document.getElementById(inputId);
+                const dd = document.getElementById(dropdownId);
+                inp.addEventListener('input', () => {
+                    const q = inp.value.trim();
+                    dd.innerHTML = '';
+                    if (!q) { dd.classList.remove('show'); return; }
+                    const matches = allStations.filter(s => s.includes(q));
+                    if (!matches.length) { dd.classList.remove('show'); return; }
+                    matches.forEach(s => {
+                        const li = document.createElement('li');
+                        li.textContent = s;
+                        li.addEventListener('mousedown', e => {
+                            e.preventDefault();
+                            inp.value = s;
+                            dd.classList.remove('show');
+                        });
+                        dd.appendChild(li);
+                    });
+                    dd.classList.add('show');
+                });
+                inp.addEventListener('focus', () => { if (inp.value.trim() && dd.children.length) dd.classList.add('show'); });
+                inp.addEventListener('blur', () => setTimeout(() => dd.classList.remove('show'), 200));
+                return inp;
+            }
+
+            const fromInp = setupSearchBox('fromInput', 'fromDropdown');
+            const toInp = setupSearchBox('toInput', 'toDropdown');
+            document.getElementById('swapBtn').addEventListener('click', () => {
+                const tmp = fromInp.value; fromInp.value = toInp.value; toInp.value = tmp;
+            });
+
+            function buildGraph() {
+                const g = {};
+                allStations.forEach(s => g[s] = []);
+                for (const [k, d] of Object.entries(LINE_DATA)) {
+                    for (let i = 0; i < d.stations.length - 1; i++) {
+                        const a = d.stations[i], b = d.stations[i + 1];
+                        g[a].push({ to: b, lineKey: k, direction: d.dirUp, type: 'hsr' });
+                        g[b].push({ to: a, lineKey: k, direction: d.dirDown, type: 'hsr' });
+                    }
+                }
+                return g;
+            }
+
+            function findRoute(from, to) {
+                if (from === to) return { success: true, path: [], totalStations: 0 };
+                if (!stationLines[from] || !stationLines[to]) return { success: false, message: '站點不存在' };
+                const g = buildGraph();
+                const visited = new Set(); visited.add(from);
+                const queue = [{ station: from, path: [], totalStations: 0 }];
+                while (queue.length) {
+                    const cur = queue.shift();
+                    for (const e of g[cur.station] || []) {
+                        if (visited.has(e.to)) continue;
+                        visited.add(e.to);
+                        const newPath = [...cur.path];
+                        const last = newPath[newPath.length - 1];
+                        if (last && last.lineKey === e.lineKey) {
+                            last.endStation = e.to;
+                            last.count++;
+                        } else {
+                            newPath.push({
+                                lineKey: e.lineKey,
+                                lineName: LINE_DATA[e.lineKey].name,
+                                color: LINE_DATA[e.lineKey].color,
+                                startStation: cur.station,
+                                endStation: e.to,
+                                direction: e.direction,
+                                count: 1
+                            });
+                        }
+                        if (e.to === to) return { success: true, path: newPath, totalStations: cur.totalStations + 1 };
+                        queue.push({ station: e.to, path: newPath, totalStations: cur.totalStations + 1 });
+                    }
+                }
+                return { success: false, message: '無法到達，請檢查站點是否連通' };
+            }
+
+            function render(route) {
+                const cont = document.getElementById('resultContainer');
+                const err = document.getElementById('errorMsg');
+                err.classList.remove('show'); cont.classList.remove('show'); cont.innerHTML = '';
+                if (!route.success) {
+                    err.textContent = route.message || '查詢失敗';
+                    err.classList.add('show'); return;
+                }
+                if (!route.path.length) {
+                    cont.innerHTML = '<div style="padding:12px;background:#f0f7ff;border-radius:8px;">起點與終點相同</div>';
+                    cont.classList.add('show'); return;
+                }
+                let html = `<div style="background:#f0f7ff;padding:12px;border-radius:8px;margin-bottom:12px;text-align:center;">🚄 全程約 ${route.totalStations} 站</div>`;
+                route.path.forEach((step, i) => {
+                    html += `<div class="step-card">
+                        <div class="step-header"><span class="line-badge" style="background:${step.color}">${step.lineName}</span><span class="direction-tag">往「${step.direction}」方向</span></div>
+                        <div class="step-route"><strong>${step.startStation}</strong> → <strong>${step.endStation}</strong>（${step.count}站）</div>
+                    </div>`;
+                });
+                const toStation = route.path[route.path.length - 1].endStation;
+                if (CITY_PAGES[toStation]) {
+                    html += `<a class="city-link" href="${CITY_PAGES[toStation]}?from=${encodeURIComponent(toStation)}">📍 查詢${toStation}市內路線</a>`;
+                }
+                cont.innerHTML = html; cont.classList.add('show');
+            }
+
+            document.getElementById('searchBtn').addEventListener('click', () => {
+                const fr = fromInp.value.trim(), tr = toInp.value.trim();
+                const err = document.getElementById('errorMsg');
+                err.classList.remove('show');
+                if (!fr || !tr) {
+                    err.textContent = '請輸入出發站和目的站';
+                    err.classList.add('show'); return;
+                }
+                const route = findRoute(fr, tr);
+                render(route);
+            });
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('from') && params.get('to')) {
+                fromInp.value = params.get('from');
+                toInp.value = params.get('to');
+                const route = findRoute(params.get('from'), params.get('to'));
+                render(route);
+            }
+        })();
+    </script>
+</body>
+</html>
